@@ -1,1 +1,3 @@
-# GitLab-CICD-on-Kubernetes
+- GitLab is a web-based DevOps platform built around Git that enables teams to manage the entire software development lifecycle from a single application. 
+- It provides features such as source code management, issue tracking, CI/CD pipelines, and package and container registries. 
+- GitLab acts as a centralized hub for hosting repositories and extends Git’s capabilities by integrating planning, automation, security, and deployment workflows.
