@@ -24,3 +24,15 @@ Executor:
  - Virtual machine
  - SSH
 
+
+ 
+
+ Tag:
+ - The tags keyword is used in a GitLab CI/CD pipeline to select which GitLab Runner should execute a job.
+ - GitLab selects a runner based on matching tags. If no tags are specified, GitLab uses shared runners.
+ - When a GitLab CI job has multiple tags, GitLab will look for a single runner that has all of the specified tags. If no runner has all tags → job stays pending. In below example Gitlab will try to find a runner which has both the tags (docker and linux).
+ tags:
+  - docker
+  - linux
+
+
