@@ -28,13 +28,16 @@ Executor:
 <img width="1243" height="634" alt="Screenshot 2026-01-16 at 2 26 37 PM" src="https://github.com/user-attachments/assets/0a996f94-78f4-49ed-bbb9-b6d8a6df677d" />
 
  
-
- tags keyword:
- - The tags keyword is used in a GitLab CI/CD pipeline to select which GitLab Runner should execute a job.
+tags keyword:
+- The tags keyword is used in a GitLab CI/CD pipeline to select which GitLab Runner should execute a job.
  - GitLab selects a runner based on matching tags. If no tags are specified, GitLab uses shared runners.
  - When a GitLab CI job has multiple tags, GitLab will look for a single runner that has all of the specified tags. If no runner has all tags → job stays pending. In below example Gitlab will try to find a runner which has both the tags (docker and linux).
  tags:
   - docker
   - linux
+
+needs keyword:
+- When you define multiple jobs in a same stage then you can create the dependency between this jobs.
+- The needs keyword defines job dependencies and allows jobs to start as soon as required jobs finish, instead of waiting for the entire previous stage.
 
 
