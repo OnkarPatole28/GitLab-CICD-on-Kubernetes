@@ -58,6 +58,8 @@ images keyword:
 
   parallel:matrix keyword
   - The parallel:matrix keyword is used to run the same job multiple times in parallel with different variable combinations. It is used to Speed up pipelines with variations.
+<img width="460" height="427" alt="Screenshot 2026-01-17 at 9 23 10 PM" src="https://github.com/user-attachments/assets/1a3e57de-f4f4-4fb0-9c8f-6ccd4aed79eb" />
+
 
   Difference between parallel and parallel:matrix:
   - parallel duplicates a job, while parallel:matrix runs variations of a job with different configurations.
