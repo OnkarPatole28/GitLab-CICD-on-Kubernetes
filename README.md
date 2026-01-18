@@ -13,8 +13,8 @@ GitLab Runner:
   - Runners are external machines or virtual machines that are responsible for running your pipeline jobs upon       triggering. They register with the GitLab server to receive and process job execution.
 
   2 types of Runners:
-  ✔ SaaS / Shared Runners : Hosted and managed by GitLab. SaaS runners are pre-provisioned and reused.
-  ✔ Self-managed Runners:  Installed and managed by you. Can run on VM, cloud, Kubernetes, etc.
+   ✔ SaaS / Shared Runners : Hosted and managed by GitLab. SaaS runners are pre-provisioned and reused.
+   ✔ Self-managed Runners:  Installed and managed by you. Can run on VM, cloud, Kubernetes, etc.
 
 
 Executor: 
