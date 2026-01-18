@@ -41,3 +41,9 @@ needs keyword:
 - The needs keyword defines job dependencies and allows jobs to start as soon as required jobs finish, instead of waiting for the entire previous stage.
 
 
+Resource groups
+
+It has three modes. When multiple commits are pushed to the same branch, GitLab decides which pipeline to trigger based on the selected resource group type.
+- unordered : Jobs run one at a time. No guaranteed order. Any waiting job may run next.
+- Oldest first: Jobs are executed in pipeline creation order. Earlier pipelines finish first.
+- Newest first: Cancels older waiting jobs. Runs only the latest pipeline. Skips outdated deployments
