@@ -47,3 +47,17 @@ It has three modes. When multiple commits are pushed to the same branch, GitLab 
 - unordered : Jobs run one at a time. No guaranteed order. Any waiting job may run next.
 - Oldest first: Jobs are executed in pipeline creation order. Earlier pipelines finish first.
 - Newest first: Cancels older waiting jobs. Runs only the latest pipeline. Skips outdated deployments
+
+images keyword:
+  - If you do not specify an image in a job and the runner (shared) is using the Docker executor, GitLab uses the runner’s default Docker image (which is often ruby, but depends on how the runner is configured).
+  - Self-managed runners may use a different default image.
+
+
+  parallel keyword
+  - The parallel keyword is used to run multiple instances of the same job simultaneously. It Speeds up pipelines. Distributes workload (tests, builds).
+
+  parallel:matrix keyword
+  - The parallel:matrix keyword is used to run the same job multiple times in parallel with different variable combinations. It is used to Speed up pipelines with variations.
+
+  Difference between parallel and parallel:matrix:
+  - parallel duplicates a job, while parallel:matrix runs variations of a job with different configurations.
