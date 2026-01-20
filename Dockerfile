@@ -4,7 +4,7 @@ WORKDIR /usr/app
 
 COPY package*.json /usr/app/
 
-RUN yarn
+RUN npm install
 
 COPY . .
 
