@@ -66,9 +66,9 @@ images keyword:
 
 More topics good to learn:
 
-extends keyword
-anchors keyword
-!reference tags
-includes keyword
-Templates (Pipeline and job templates)
-Difference between extends , anchors and refrence tags.
+- extends keyword
+- anchors keyword
+- !reference tags
+- includes keyword
+- Templates (Pipeline and job templates)
+- Difference between extends , anchors and refrence tags.
