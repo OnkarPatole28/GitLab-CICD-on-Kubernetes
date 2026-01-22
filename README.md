@@ -63,3 +63,12 @@ images keyword:
 
   Difference between parallel and parallel:matrix:
   - parallel duplicates a job, while parallel:matrix runs variations of a job with different configurations.
+
+More topics good to learn:
+
+extends keyword
+anchors keyword
+!reference tags
+includes keyword
+Templates (Pipeline and job templates)
+Difference between extends , anchors and refrence tags.
