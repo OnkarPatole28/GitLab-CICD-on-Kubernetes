@@ -11,6 +11,7 @@ variables:
 
 stages:
   - test
+  - containerization
   
 unit_testing:
   stage: test
@@ -56,3 +57,16 @@ code_coverage:
         coverage_format: cobertura
         path: coverage/cobertura-coverage.xml
   allow_failure: true
+
+docker_build:
+  stage: containerization
+  image: docker:24.0.5
+  dependencies: []
+  services:
+    - docker:24.0.5-dind
+  script:
+    - chmod +x ./scripts/docker_build.sh
+    - ./scripts/docker_build.sh
+  artifacts:
+    paths:
+      - image
