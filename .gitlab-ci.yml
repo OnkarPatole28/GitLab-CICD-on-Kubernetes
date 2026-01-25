@@ -1,0 +1,42 @@
+workflow:
+    name: Solar System NodeJS Pipeline
+    # WE CAN ALSO DEFINE RULES AT WORKFLOW LEVEL (WILL WORK ON IT LATER)
+
+# VARIABLES ARE STORED AS A PROTECTED/MASKED VARIABLES IN GITLAB UI: GitLab UI -> Settings -> CICD -> variables
+variables:
+  MONGO_URI: $MONGODB_URI
+  MONGO_USERNAME: $MONGODB_USERNAME 
+  MONGO_PASSWORD: $$MONGODB_PASSWORD
+  IMAGE_VERSION: $CI_PIPELINE_ID
+
+stages:
+  - test
+  
+unit_testing:
+  stage: test
+  image: node:17-alpine3.14
+  before_script:
+    - npm install
+  script:
+    - npm test
+  artifacts:
+    name: Mocha-Test-Result
+    when: on_success
+    paths:
+      - test-results.xml
+    expire_in: 3 days 
+
+code_coverage:
+  stage: test
+  image: node:17-alpine3.14
+  before_script:
+    - npm install
+  script: |
+    npm run coverage
+  artifacts:
+    name: Code-Coverage-Result
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+  allow_failure: true
