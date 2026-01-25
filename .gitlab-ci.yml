@@ -19,6 +19,14 @@ unit_testing:
     - npm install
   script:
     - npm test
+  cache:
+    policy: pull-push
+    key:
+        files:
+          - package-lock.json
+        prefix: node-modules
+    paths:
+      - node_modules
   artifacts:
     name: Mocha-Test-Result
     when: on_success
@@ -31,6 +39,14 @@ code_coverage:
   image: node:17-alpine3.14
   before_script:
     - npm install
+  cache:
+    policy: pull
+    key:
+        files:
+          - package-lock.json
+        prefix: node-modules
+    paths:
+      - node_modules
   script: |
     npm run coverage
   artifacts:
