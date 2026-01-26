@@ -132,6 +132,22 @@ k8s_connect_deploy:
     - export INGRESS_IP=$(kubectl -n ingress-nginx get services ingress-nginx-controller -O jsonpath="{.status.loadBalancer.ingress[0].ip}")
     - echo $INGRESS_IP
     - kubectl -n "$NAMESPACE" create secret generic mongo-db-creds --from-literal=MONGO_URI="$MONGO_URI" --from-literal=MONGO_USERNAME="$MONGO_USERNAME" --from-literal=MONGO_PASSWORD="$MONGO_PASSWORD" --save-config --dry-run=client -o yaml | kubectl apply -f -
-
     - for i in kubernetes/manifest/*.yaml; do envsubst < $i | kubectl apply -f -; done
+    - kubectl -n $NAMESPACE get all 
+    - echo "INGRESS_URL=$(kubectl -n $NAMESPACE get ing -o jsonpath="{.items[0].spec.tls[0].hosts[0]}")" >> app_ingress_url.env
+  artifacts:
+  reports:
+    dotenv: app_ingress_url.env
 
+k8s_ntegration_testing:
+  stage: deploy
+  image: alpine:3.7
+    needs:
+    - k8s_connect_deploy
+  before_script:
+    - apk --no-cache add curl
+    - apk --no-cache add jq
+  script:
+    - echo $INGRESS_URL
+    - curl -s -k https://$INGRESS_URL/live | jq -r .status | grep -i live
+    - curl -s -k https://$INGRESS_URL/ready | jq -r .status | grep -i ready
