@@ -13,10 +13,14 @@ variables:
   DOCKER_REGISTRY: $MY_DOCKER_REGISTRY
   IMAGE_NAME: "$MY_DOCKER_REGISTRY/root/$CI_PROJECT_NAME"
   IMAGE_TAG: "$CI_COMMIT_SHA"
+  K8S_IMAGE: $DOCKER_USERNAME/solar-system:$IMAGE_VERSION
+  REPLICAS: 2
+  NAMESPACE: Development
 
 stages:
   - test
   - containerization
+  - deploy
   
 unit_testing:
   stage: test
@@ -108,17 +112,26 @@ docker_push:
     - docker push $DOCKER_USERNAME/solar-system:$IMAGE_VERSION
 
 
-k8s_dev_connect:
-  stage: containerization
+k8s_connect_deploy:
+  stage: deploy
   image: ubuntu:22.04
+  dependencies: []
   before_script: 
     - apt update    
     - apt install -y curl
     - curl -LO "https://dl.k8s.io/release/v1.29.0/bin/linux/amd64/kubectl"
     - chmod +x ./kubectl
     - mv ./kubectl /usr/local/bin/kubectl
+    - apk add --no-cache gettext
+    - envsubst -V
   script:
     - export KUBECONFIG=$KUBE_CONFIG  
     - kubectl version -o yaml
+    - kubectl config get-contexts
     - kubectl get nodes    
+    - export INGRESS_IP=$(kubectl -n ingress-nginx get services ingress-nginx-controller -O jsonpath="{.status.loadBalancer.ingress[0].ip}")
+    - echo $INGRESS_IP
+    - kubectl -n "$NAMESPACE" create secret generic mongo-db-creds --from-literal=MONGO_URI="$MONGO_URI" --from-literal=MONGO_USERNAME="$MONGO_USERNAME" --from-literal=MONGO_PASSWORD="$MONGO_PASSWORD" --save-config --dry-run=client -o yaml | kubectl apply -f -
+
+    - for i in kubernetes/manifest/*.yaml; do envsubst < $i | kubectl apply -f -; done
 
