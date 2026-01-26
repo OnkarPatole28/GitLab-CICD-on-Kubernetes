@@ -8,6 +8,8 @@ variables:
   MONGO_USERNAME: $MONGODB_USERNAME 
   MONGO_PASSWORD: $$MONGODB_PASSWORD
   IMAGE_VERSION: $CI_PIPELINE_ID
+  DOCKER_USERNAME: $MY_DOCKER-USERNAME
+  DOCKER_PASSWORD: $MY_DOCKER_PASSWORD
   DOCKER_REGISTRY: $MY_DOCKER_REGISTRY
   IMAGE_NAME: "$MY_DOCKER_REGISTRY/root/$CI_PROJECT_NAME"
   IMAGE_TAG: "$CI_COMMIT_SHA"
@@ -61,32 +63,50 @@ code_coverage:
         path: coverage/cobertura-coverage.xml
   allow_failure: true
 
-# docker_build:
-#   stage: containerization
-#   image: docker:24.0.5
-#   dependencies: []
-#   services:
-#     - docker:24.0.5-dind
-#   script:
-#     - chmod +x ./scripts/docker_build.sh
-#     - ./scripts/docker_build.sh
-#   artifacts:
-#     paths:
-#       - image
-docker_build_push:
+docker_build:
   stage: containerization
   image: docker:24.0.5
-  dependencies: []
+  dependencies: []             # YOU DON'T WANT THIS JOB TO DOWNLOAD ANY ARTIFACTS FROM THE PREVIOUS JOBS, THAT'S WAY [].
   services:
     - docker:24.0.5-dind
-  before_script:
-    - chmod +x ./scripts/docker_build.sh
-    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY    
   script:
-    - docker build -t $IMAGE_NAME:$IMAGE_TAG .
-    - docker push $IMAGE_NAME:$IMAGE_TAG
-    - docker tag $IMAGE_NAME:$IMAGE_TAG $IMAGE_NAME:latest
-    - docker push $IMAGE_NAME:latest
+    - docker build -t $DOCKER_USERNAME/solar-system:$IMAGE_VERSION .
+    - docker images $DOCKER_USERNAME/solar-system:$IMAGE_VERSION
+    - mkdir image
+    - docker save $DOCKER_USERNAME/solar-system:$IMAGE_VERSION > image/solar-system-image:$IMAGE_VERSION.tar
+  artifacts:
+    when: on_success
+    paths:
+      - image
+    expire_in: 3 days 
+
+docker_test:
+  stage: containerization
+  image: docker:24.0.5
+  needs:
+    - docker_build             
+  services:
+    - docker:24.0.5-dind
+  script:
+    - docker Load -i image/solar-system-image-$CI_PIPELINE_ID.tar
+    - docker run --name solar-system-app -d -p 3000:3000 $DOCKER_USERNAME/solar-system:$IMAGE_VERSION
+    - export IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' solar-system-app)
+    - echo $IP
+    - docker run alpine wget -q -O - http://$IP:3000/Live| grep Live
+
+docker_push:
+  stage: containerization
+  needs:
+    - docker_build 
+    - docker_test
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  script:
+    - docker Load -i image/solar-system-image-$CI_PIPELINE_ID.tar
+    - docker login --username=$DOCKER_USERNAME --password=DOCKER_PASSWORD
+    - docker push $DOCKER_USERNAME/solar-system:$IMAGE_VERSION
+
 
 k8s_dev_connect:
   stage: containerization
