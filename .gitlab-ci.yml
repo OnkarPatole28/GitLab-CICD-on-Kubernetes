@@ -17,7 +17,7 @@ variables:
   REPLICAS: 2
   NAMESPACE: Development
 
-stages:
+stages: # WE DEFINE STAGES T0 LOGICALLY GROUP THE JOBS. JOBS DEFINED IN SAME STAGE RUNS IN PARALLEL UNLESS USED NEEDS KEYWORD 
   - test
   - containerization
   - deploy
@@ -29,7 +29,7 @@ unit_testing:
     - npm install
   script:
     - npm test
-  cache:
+  cache:    # WE USE CACHE KEYWORD SO THAT DEPENDENCIES INSTALLED IN ONE JOB CAN BE USED IN OTHER JOBS WITHOUT THEM DOWNLOADING AGAIN
     policy: pull-push
     key:
         files:
@@ -37,7 +37,7 @@ unit_testing:
         prefix: node-modules
     paths:
       - node_modules
-  artifacts:
+  artifacts:           # WE STORE THE ARTIFACTS, SO THAT THEY CAN BE USED IN DIFFERENT JOBS SINCE JOBS MIGHT RUN ON DIFFERENT MACHINES.
     name: Mocha-Test-Result
     when: on_success
     paths:
@@ -65,14 +65,14 @@ code_coverage:
       coverage_report:
         coverage_format: cobertura
         path: coverage/cobertura-coverage.xml
-  allow_failure: true
+  allow_failure: true # IF WE SET THIS PARAMETER THEN EVEN IF THE JOB FAILS, PIPELINE WILL NOT FAIL
 
 docker_build:
   stage: containerization
   image: docker:24.0.5
   dependencies: []             # YOU DON'T WANT THIS JOB TO DOWNLOAD ANY ARTIFACTS FROM THE PREVIOUS JOBS, THAT'S WAY [].
   services:
-    - docker:24.0.5-dind
+    - docker:24.0.5-dind  # SINCE WE ARE RUNNING DOCKER COMMAND IN DOCKER (BECAUSE WE ARE USING DOCKER AS OUR EXECUTER IN THIS CASE) WE USE THIS SERVICE
   script:
     - docker build -t $DOCKER_USERNAME/solar-system:$IMAGE_VERSION .
     - docker images $DOCKER_USERNAME/solar-system:$IMAGE_VERSION
