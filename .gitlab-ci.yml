@@ -2,29 +2,25 @@ workflow:
     name: Solar System NodeJS Pipeline
     # WE CAN ALSO DEFINE RULES AT WORKFLOW LEVEL (WILL WORK ON IT LATER)
 
-# VARIABLES ARE STORED AS A PROTECTED/MASKED VARIABLES IN GITLAB UI: GitLab UI -> Settings -> CICD -> variables
 variables:
-  MONGO_URI: $MONGODB_URI
-  MONGO_USERNAME: $MONGODB_USERNAME 
-  MONGO_PASSWORD: $$MONGODB_PASSWORD
+  MONGO_URI: $MONGO_URI
+  MONGO_USERNAME: $MONGO_USERNAME 
+  MONGO_PASSWORD: $MONGO_PASSWORD
   IMAGE_VERSION: $CI_PIPELINE_ID
-  DOCKER_USERNAME: $MY_DOCKER-USERNAME
+  DOCKER_USERNAME: $MY_DOCKER_USERNAME
   DOCKER_PASSWORD: $MY_DOCKER_PASSWORD
   DOCKER_REGISTRY: $MY_DOCKER_REGISTRY
-  IMAGE_NAME: "$MY_DOCKER_REGISTRY/root/$CI_PROJECT_NAME"
-  IMAGE_TAG: "$CI_COMMIT_SHA"
-  K8S_IMAGE: $DOCKER_USERNAME/solar-system:$IMAGE_VERSION
-  REPLICAS: 2
-  NAMESPACE: Development
-
+  GITLAB_PUSH_TOKEN: $GITLAB_PUSH_TOKEN
+  APP_URL: $APP_URL
+  
 stages: # WE DEFINE STAGES T0 LOGICALLY GROUP THE JOBS. JOBS DEFINED IN SAME STAGE RUNS IN PARALLEL UNLESS USED NEEDS KEYWORD 
   - test
   - containerization
   - deploy
-  
+
 unit_testing:
   stage: test
-  image: node:17-alpine3.14
+  image: node:20-alpine3.19
   before_script:
     - npm install
   script:
@@ -42,7 +38,7 @@ unit_testing:
     when: on_success
     paths:
       - test-results.xml
-    expire_in: 3 days 
+    expire_in: 5 days 
 
 code_coverage:
   stage: test
@@ -70,19 +66,19 @@ code_coverage:
 docker_build:
   stage: containerization
   image: docker:24.0.5
-  dependencies: []             # YOU DON'T WANT THIS JOB TO DOWNLOAD ANY ARTIFACTS FROM THE PREVIOUS JOBS, THAT'S WAY [].
+  dependencies: [] 
   services:
     - docker:24.0.5-dind  # SINCE WE ARE RUNNING DOCKER COMMAND IN DOCKER (BECAUSE WE ARE USING DOCKER AS OUR EXECUTER IN THIS CASE) WE USE THIS SERVICE
   script:
-    - docker build -t $DOCKER_USERNAME/solar-system:$IMAGE_VERSION .
-    - docker images $DOCKER_USERNAME/solar-system:$IMAGE_VERSION
+    - docker build -t $DOCKER_USERNAME/solar-system-gitlab:$IMAGE_VERSION .
+    - docker images $DOCKER_USERNAME/solar-system-gitlab:$IMAGE_VERSION
     - mkdir image
-    - docker save $DOCKER_USERNAME/solar-system:$IMAGE_VERSION > image/solar-system-image:$IMAGE_VERSION.tar
+    - docker save $DOCKER_USERNAME/solar-system-gitlab:$IMAGE_VERSION > image/solar-system-gitlab-image:$IMAGE_VERSION.tar
   artifacts:
     when: on_success
     paths:
       - image
-    expire_in: 3 days 
+    expire_in: 3 days   
 
 docker_test:
   stage: containerization
@@ -92,11 +88,11 @@ docker_test:
   services:
     - docker:24.0.5-dind
   script:
-    - docker Load -i image/solar-system-image-$CI_PIPELINE_ID.tar
-    - docker run --name solar-system-app -d -p 3000:3000 $DOCKER_USERNAME/solar-system:$IMAGE_VERSION
+    - docker load -i image/solar-system-gitlab-image:$IMAGE_VERSION.tar
+    - docker run --name solar-system-app -d -p 3000:3000 -e MONGO_URI="$MONGO_URI" -e MONGO_USERNAME="$MONGO_USERNAME" -e MONGO_PASSWORD="$MONGO_PASSWORD" $DOCKER_USERNAME/solar-system-gitlab:$IMAGE_VERSION
     - export IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' solar-system-app)
     - echo $IP
-    - docker run alpine wget -q -O - http://$IP:3000/Live| grep Live
+    - docker run alpine wget -q -O - http://$IP:3000/live | grep live
 
 docker_push:
   stage: containerization
@@ -107,47 +103,37 @@ docker_push:
   services:
     - docker:24.0.5-dind
   script:
-    - docker Load -i image/solar-system-image-$CI_PIPELINE_ID.tar
-    - docker login --username=$DOCKER_USERNAME --password=DOCKER_PASSWORD
-    - docker push $DOCKER_USERNAME/solar-system:$IMAGE_VERSION
+    - docker load -i image/solar-system-gitlab-image:$IMAGE_VERSION.tar
+    - docker login --username=$DOCKER_USERNAME --password=$DOCKER_PASSWORD
+    - docker push $DOCKER_USERNAME/solar-system-gitlab:$IMAGE_VERSION
 
-
-k8s_connect_deploy:
+k8s_update_manifest:
   stage: deploy
-  image: ubuntu:22.04
-  dependencies: []
-  before_script: 
-    - apt update    
-    - apt install -y curl
-    - curl -LO "https://dl.k8s.io/release/v1.29.0/bin/linux/amd64/kubectl"
-    - chmod +x ./kubectl
-    - mv ./kubectl /usr/local/bin/kubectl
-    - apk add --no-cache gettext
-    - envsubst -V
-  script:
-    - export KUBECONFIG=$KUBE_CONFIG  
-    - kubectl version -o yaml
-    - kubectl config get-contexts
-    - kubectl get nodes    
-    - export INGRESS_IP=$(kubectl -n ingress-nginx get services ingress-nginx-controller -O jsonpath="{.status.loadBalancer.ingress[0].ip}")
-    - echo $INGRESS_IP
-    - kubectl -n "$NAMESPACE" create secret generic mongo-db-creds --from-literal=MONGO_URI="$MONGO_URI" --from-literal=MONGO_USERNAME="$MONGO_USERNAME" --from-literal=MONGO_PASSWORD="$MONGO_PASSWORD" --save-config --dry-run=client -o yaml | kubectl apply -f -
-    - for i in kubernetes/manifest/*.yaml; do envsubst < $i | kubectl apply -f -; done
-    - kubectl -n $NAMESPACE get all 
-    - echo "INGRESS_URL=$(kubectl -n $NAMESPACE get ing -o jsonpath="{.items[0].spec.tls[0].hosts[0]}")" >> app_ingress_url.env
-  artifacts:
-  reports:
-    dotenv: app_ingress_url.env
-
-k8s_ntegration_testing:
-  stage: deploy
-  image: alpine:3.7
-    needs:
-    - k8s_connect_deploy
+  needs:
+    - docker_push
+  image: alpine:3.19
   before_script:
-    - apk --no-cache add curl
-    - apk --no-cache add jq
+    - apk add --no-cache git sed
+    - git config --global user.name "GitLab CI"
+    - git config --global user.email "ci@example.com"
   script:
-    - echo $INGRESS_URL
-    - curl -s -k https://$INGRESS_URL/live | jq -r .status | grep -i live
-    - curl -s -k https://$INGRESS_URL/ready | jq -r .status | grep -i ready
+    - 'sed -i "s|image: .*|image: $DOCKER_USERNAME/solar-system-gitlab:$IMAGE_VERSION|g" kubernetes/deployment.yaml'
+    - git add kubernetes/deployment.yaml
+    - git commit -m "Update image to $IMAGE_VERSION [skip ci]" || echo "No changes to commit"
+    - git push https://oauth2:$GITLAB_PUSH_TOKEN@gitlab.com/devops-projects1972810/GitLab-CICD-on-Kubernetes.git HEAD:$CI_COMMIT_BRANCH
+
+k8s_integration_testing:
+  stage: deploy
+  needs:
+    - k8s_update_manifest
+  image: alpine:3.19
+  before_script:
+    - apk add --no-cache curl jq
+  script:
+    # wait for ArgoCD to deploy the new version
+    - echo "Waiting for argo cd to complete application rollout..."
+    - sleep 120
+
+    # health checks
+    - curl -s http://$APP_URL/live | jq -r .status | grep -i live
+    - curl -s http://$APP_URL/ready | jq -r .status | grep -i ready
